@@ -37,162 +37,83 @@
 #define htols(x)     __bswap_16(x)
 #endif
 
-#define FATAL do { fprintf(stderr, "Error at line %d, file %s (%d) [%s]\n", __LINE__, __FILE__, errno, strerror(errno)); exit(1); } while(0)
-
 #define MAP_SIZE (32*1024UL)
-#define MAP_MASK (MAP_SIZE - 1)
 
-int main(int argc, char **argv)
-{
-	int fd;
-	void *map_base, *virt_addr;
-	uint32_t read_result, writeval;
-	off_t target;
-	/* access width */
-	int access_width = 'w';
-	char *device;
 
-	/* not enough arguments given? */
-	if (argc < 3) {
-		fprintf(stderr,
-			"\nUsage:\t%s <device> <address> [[type] data]\n"
-			"\tdevice  : character device to access\n"
-			"\taddress : memory address to access\n"
-			"\ttype    : access operation type : [b]yte, [h]alfword, [w]ord\n"
-			"\tdata    : data to be written for a write\n\n",
-			argv[0]);
-		exit(1);
+
+static int pcie_device_file_descriptor;
+static void *pcie_mapped_base_address;
+
+int open_pcie_device(char *pcie_device) {
+	if ((pcie_device_file_descriptor = open(pcie_device, O_RDWR | O_SYNC)) == -1) {
+		return -1;
 	}
-
-	printf("argc = %d\n", argc);
-
-	device = strdup(argv[1]);
-	printf("device: %s\n", device);
-	target = strtoul(argv[2], 0, 0);
-	printf("address: 0x%08x\n", (unsigned int)target);
-
-	printf("access type: %s\n", argc >= 4 ? "write" : "read");
-
-	/* data given? */
-	if (argc >= 4) {
-		printf("access width given.\n");
-		access_width = tolower(argv[3][0]);
-	}
-	printf("access width: ");
-	if (access_width == 'b')
-		printf("byte (8-bits)\n");
-	else if (access_width == 'h')
-		printf("half word (16-bits)\n");
-	else if (access_width == 'w')
-		printf("word (32-bits)\n");
-	else {
-		printf("word (32-bits)\n");
-		access_width = 'w';
-	}
-
-	if ((fd = open(argv[1], O_RDWR | O_SYNC)) == -1)
-		FATAL;
-	printf("character device %s opened.\n", argv[1]);
-	fflush(stdout);
-
-	/* map one page */
-	map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (map_base == (void *)-1)
-		FATAL;
-	printf("Memory mapped at address %p.\n", map_base);
-	fflush(stdout);
-
-	/* calculate the virtual address to be accessed */
-	virt_addr = map_base + target;
-	/* read only */
-	if (argc <= 4) {
-		//printf("Read from address %p.\n", virt_addr); 
-		switch (access_width) {
-		case 'b':
-			read_result = *((uint8_t *) virt_addr);
-			printf
-			    ("Read 8-bits value at address 0x%08x (%p): 0x%02x\n",
-			     (unsigned int)target, virt_addr,
-			     (unsigned int)read_result);
-			break;
-		case 'h':
-			read_result = *((uint16_t *) virt_addr);
-			/* swap 16-bit endianess if host is not little-endian */
-			read_result = ltohs(read_result);
-			printf
-			    ("Read 16-bit value at address 0x%08x (%p): 0x%04x\n",
-			     (unsigned int)target, virt_addr,
-			     (unsigned int)read_result);
-			break;
-		case 'w':
-			read_result = *((uint32_t *) virt_addr);
-			/* swap 32-bit endianess if host is not little-endian */
-			read_result = ltohl(read_result);
-			printf
-			    ("Read 32-bit value at address 0x%08x (%p): 0x%08x\n",
-			     (unsigned int)target, virt_addr,
-			     (unsigned int)read_result);
-			return (int)read_result;
-			break;
-		default:
-			fprintf(stderr, "Illegal data type '%c'.\n",
-				access_width);
-			exit(2);
-		}
-		fflush(stdout);
-	}
-	/* data value given, i.e. writing? */
-	if (argc >= 5) {
-		writeval = strtoul(argv[4], 0, 0);
-		switch (access_width) {
-		case 'b':
-			printf("Write 8-bits value 0x%02x to 0x%08x (0x%p)\n",
-			       (unsigned int)writeval, (unsigned int)target,
-			       virt_addr);
-			*((uint8_t *) virt_addr) = writeval;
-#if 0
-			if (argc > 4) {
-				read_result = *((uint8_t *) virt_addr);
-				printf("Written 0x%02x; readback 0x%02x\n",
-				       writeval, read_result);
-			}
-#endif
-			break;
-		case 'h':
-			printf("Write 16-bits value 0x%04x to 0x%08x (0x%p)\n",
-			       (unsigned int)writeval, (unsigned int)target,
-			       virt_addr);
-			/* swap 16-bit endianess if host is not little-endian */
-			writeval = htols(writeval);
-			*((uint16_t *) virt_addr) = writeval;
-#if 0
-			if (argc > 4) {
-				read_result = *((uint16_t *) virt_addr);
-				printf("Written 0x%04x; readback 0x%04x\n",
-				       writeval, read_result);
-			}
-#endif
-			break;
-		case 'w':
-			printf("Write 32-bits value 0x%08x to 0x%08x (0x%p)\n",
-			       (unsigned int)writeval, (unsigned int)target,
-			       virt_addr);
-			/* swap 32-bit endianess if host is not little-endian */
-			writeval = htoll(writeval);
-			*((uint32_t *) virt_addr) = writeval;
-#if 0
-			if (argc > 4) {
-				read_result = *((uint32_t *) virt_addr);
-				printf("Written 0x%08x; readback 0x%08x\n",
-				       writeval, read_result);
-			}
-#endif
-			break;
-		}
-		fflush(stdout);
-	}
-	if (munmap(map_base, MAP_SIZE) == -1)
-		FATAL;
-	close(fd);
 	return 0;
+}
+
+void close_pcie_device() {
+	close(pcie_device_file_descriptor);
+}
+
+void * get_pcie_base_address() {
+	pcie_mapped_base_address = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, pcie_device_file_descriptor, 0);
+	return pcie_mapped_base_address;
+}
+
+int dealloc_pcie_from_memory() {
+	if (munmap(pcie_mapped_base_address, MAP_SIZE) == -1) {
+		return -1;
+	}
+	return 0;
+}
+
+void write_byte(off_t pcie_offset, uint32_t data) {
+	void *virt_addr;
+	uint32_t writeval;
+	writeval = data;
+	virt_addr = pcie_mapped_base_address + pcie_offset;
+	*((uint8_t *) virt_addr) = writeval;
+}
+
+void write_half_word(off_t pcie_offset, uint32_t data) {
+	void *virt_addr;
+	uint32_t writeval;
+	writeval = data;
+	virt_addr = pcie_mapped_base_address + pcie_offset;
+	writeval = htols(writeval);
+	*((uint16_t *) virt_addr) = writeval;
+}
+
+void write_word(off_t pcie_offset, uint32_t data) {
+	void *virt_addr;
+	uint32_t writeval;
+	writeval = data;
+	virt_addr = pcie_mapped_base_address + pcie_offset;
+	writeval = htoll(writeval);
+	*((uint32_t *) virt_addr) = writeval;
+}
+
+void send_packet(off_t pcie_offset, char *packet_data, uint32_t packet_length) {
+	void *virt_addr;
+	char *packet_data_ptr;
+	uint32_t writeval;
+	uint32_t num_words_to_send;
+	uint32_t num_remaining_bytes;
+	num_words_to_send = packet_length / 4;
+	num_remaining_bytes = packet_length % 4;
+	packet_data_ptr = packet_data;
+	for (int i=0;i<num_words_to_send;i++){
+		writeval = *((uint32_t *) packet_data_ptr);
+		write_word(pcie_offset,writeval);
+		packet_data_ptr = packet_data_ptr + 4;
+	}
+	for (int i=0;i<num_remaining_bytes;i++){
+		writeval = *((uint8_t *) packet_data_ptr);
+		write_byte(pcie_offset,writeval);
+		packet_data_ptr = packet_data_ptr + 1;
+	}
+
+} 
+
+int main(){
 }
