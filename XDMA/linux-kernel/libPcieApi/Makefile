@@ -8,7 +8,12 @@ pcie_api:
 shared:
 	$(CC) -shared -o libPcieApi.so PcieApi.o
 
+install:
+	mv libPcieApi.so /lib/x86_64-linux-gnu/
+
+pcie_test:
+	gcc -o pcie_test pcie_test.c -lPcieApi
 
 clean:
-	rm -rf *.o *.so
+	rm -rf *.o *.so pcie_test
 
