@@ -3,12 +3,12 @@
 
 
 int main(){
+	int pcie_device_file_descriptor = 0;
 	char *sample_data = "sample_data";
-	open_pcie_device("/dev/pcie_xdma");
-	get_pcie_base_address();
+	pcie_device_file_descriptor = open_pcie_device("/dev/pcie_xdma");
+	init_pcie_device(pcie_device_file_descriptor);
 	send_packet(0,sample_data,11);
-	dealloc_pcie_from_memory();
-	close_pcie_device();
+	close_pcie_device(pcie_device_file_descriptor);
 
 } 
 
