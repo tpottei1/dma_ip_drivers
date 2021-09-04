@@ -22,41 +22,42 @@ void init_pcie_device(int pcie_device_file_descriptor) {
 
 void write_byte(off_t pcie_offset, uint32_t data) {
 	void *virt_addr;
-	uint32_t writeval;
-	writeval = data;
+	uint32_t write_val;
+	write_val = data;
 	virt_addr = pcie_mapped_base_address + pcie_offset;
-	*((uint8_t *) virt_addr) = writeval;
+	*((uint8_t *) virt_addr) = write_val;
 }
 
 void write_word(off_t pcie_offset, uint32_t data) {
 	void *virt_addr;
-	uint32_t writeval;
-	writeval = data;
+	uint32_t write_val;
+	write_val = data;
 	virt_addr = pcie_mapped_base_address + pcie_offset;
-	writeval = htoll(writeval);
-	*((uint32_t *) virt_addr) = writeval;
+	write_val = htoll(write_val);
+	*((uint32_t *) virt_addr) = write_val;
 }
 
 void send_packet(uint32_t channel, char *packet_data, uint32_t packet_length) {
-	void *virt_addr;
 	off_t write_offset;
+	uint32_t write_val;
 	char *packet_data_ptr;
-	uint32_t writeval;
 	uint32_t num_words_to_send;
 	uint32_t num_remaining_bytes;
+
+
 	num_words_to_send = packet_length / 4;
 	num_remaining_bytes = packet_length % 4;
 	packet_data_ptr = packet_data;
 	write_offset = channel * CHANNEL_SIZE;
 	for (int i=0;i<num_words_to_send;i++){
-		writeval = *((uint32_t *) packet_data_ptr);
-		write_word(write_offset,writeval);
+		write_val = *((uint32_t *) packet_data_ptr);
+		write_word(write_offset,write_val);
 		packet_data_ptr = packet_data_ptr + 4;
 		write_offset = write_offset + 4;
 	}
 	for (int i=0;i<num_remaining_bytes;i++){
-		writeval = *((uint8_t *) packet_data_ptr);
-		write_byte(write_offset,writeval);
+		write_val = *((uint8_t *) packet_data_ptr);
+		write_byte(write_offset,write_val);
 		packet_data_ptr = packet_data_ptr + 1;
 		write_offset = write_offset + 1;
 	}
