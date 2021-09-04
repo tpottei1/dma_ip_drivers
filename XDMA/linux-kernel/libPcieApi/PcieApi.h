@@ -92,8 +92,8 @@ void write_word(off_t pcie_offset, uint32_t data);
  * This function sends a packet over pcie at a provided channel.
  *
  * @param channel The pcie channel to write to 
- * @param packet_data This input is the packet contents to be written to the 
- *                     pcie memory region
+ * @param packet_data This input is the packet contents to be written to a 
+ *                     pcie channel
  * @param packet_length The size in bytes of the packet contents
  ******************************************************************************/
 void send_packet(uint32_t channel, char *packet_data, uint32_t packet_length); 
